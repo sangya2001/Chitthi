@@ -3,6 +3,7 @@ require('dotenv').config()
 
 const { API_KEY, MNEMONIC } = process.env;
 module.exports = {
+    contracts_build_directory: "./app/src/Build",
     networks: {
         development: {
             host: "localhost",
