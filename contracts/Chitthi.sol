@@ -2,7 +2,8 @@
 pragma solidity ^0.5.0 <0.7.0;
 
 contract Chitthi{
-    // Cache - This cache is used since updateRequest needs byte value to operate
+    /* Cache - This cache is used since updateRequest needs byte value to operate
+     and we can only pass bytes not string */
     bytes trueValue = "true";
     bytes falseValue = "false";
     
@@ -79,29 +80,46 @@ contract Chitthi{
     );
     
     // -------------------------Function Modifiers-------------------------------//
+    // 0. Address validator
+    
+    /* Adress is passed with message and checks whether empty address or not */
+    function validateAddress(address _addressToValidate,string memory _falseMessage) pure private{
+        require(_addressToValidate != address(0x0), _falseMessage);
+    }
     
     // 1. Check if user or not
     modifier isUser{
-        require(users[msg.sender].userAddress != address(0x0), "Current wallet owner is not an user!");
+        // checks in the array of users list if the user address is listed or not
+        // if listed isUser == true else isUser = false and return false message
+        validateAddress(users[msg.sender].userAddress, "Current wallet owner is not an user!");
         _;
     }
     
     // 2. Middleware for new user
-    modifier newUserMiddleware(address _userAddress, string memory _userName) {
+    modifier newUserMiddleware(string memory _userName) {
+        // empty string can't be passed as username
         require(bytes(_userName).length > 0, 'Username can\'t be null!');
-        require(_userAddress != address(0x0), 'User Address can\'t be null!');
-        require(msg.sender != address(0x0), 'Wallet not detected!');
+
+        // since eth/gas amount is used to transact the tx, making sure the wallet is up
+        validateAddress(msg.sender, "Wallet not detected!");
         _;
     }
     
     // 3. Middleware for sending Message
     modifier newMessageMiddleware(address _toAddress, string memory _message){
-        require(users[_toAddress].userAddress != address(0x0), "Receiver is not an user!");
-        require(_toAddress != address(0x0), 'Receiver\'s Address can\'t be null!');
+        // same logic as isUser for checking if receiver is user or not
+        validateAddress(users[_toAddress].userAddress, "Receiver is not an user!");
+
+        // since eth/gas amount is used to transact the tx, making sure the wallet is up
+        validateAddress(_toAddress, 'Receiver\'s Address can\'t be null!');
+
+        // empty string can't be passed as message
         require(bytes(_message).length > 0, 'Message can\'t be null!');
-        require(msg.sender != address(0x0), 'Wallet not detected!');
+
+        // since eth/gas amount is used to transact the tx, making sure the wallet is up
+        validateAddress(msg.sender, "Wallet not detected!");
         
-        // check if _toAddress is friend or not
+        // check if _toAddress is friend or not of msg.sender
         bool isFriend = false;
         for(uint256 i = 1; i <= friendCount; i++){
             if(friends[msg.sender][i].friendAddress == _toAddress){
@@ -115,13 +133,13 @@ contract Chitthi{
     
     // 4. Middleware for sending friend request
     modifier newFriendRequestMiddleware(address _requestReceiver){
-        require(users[_requestReceiver].userAddress != address(0x0), "Request receiver is not an user!");
+        validateAddress(users[_requestReceiver].userAddress, "Request receiver is not an user!");
         _;
     }
     
     // 5. Middleware for adding friend
     modifier addFriendMiddleware(address _requestFrom){
-        require(_requestFrom != address(0x0), "Address must not be null!");
+        validateAddress(_requestFrom, "Address must not be null!");
         _;
     }
     
@@ -133,10 +151,10 @@ contract Chitthi{
     
     //--------------------------Functions----------------------------------------//
     // 1. Create User
-    function addUser(address _userAddress, string memory _userName) newUserMiddleware(_userAddress, _userName) public{
-        users[_userAddress] = User(_userName, _userAddress);
+    function addUser(string memory _userName) newUserMiddleware(_userName) public{
+        users[msg.sender] = User(_userName, msg.sender);
         emit userAdded(
-             _userName, _userAddress
+             _userName, msg.sender
         );
     }
     
